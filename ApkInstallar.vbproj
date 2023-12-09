@@ -73,7 +73,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApplicationEvents.vb" />
-    <Compile Include="DarkMode.vb" />
     <Compile Include="frmMain.vb">
       <SubType>Form</SubType>
     </Compile>

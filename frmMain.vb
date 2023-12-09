@@ -21,16 +21,12 @@ Public Class frmMain
     Private StartupPath As String
     Private CurrentDirectory As DirectoryInfo
     Private ConfigFile As String
-    Protected Overrides Sub WndProc(ByRef m As Message)
-        DarkMode.WndProc(Me, m, DarkMode.Theme.DARK)
-        MyBase.WndProc(m)
-    End Sub
+
     Private Sub frmMain_FormClosing(ByVal sender As Object, ByVal e As System.Windows.Forms.FormClosingEventArgs) Handles Me.FormClosing
         File.WriteAllText(StartupPath & "\" & ConfigFile, txtAdbPath.Text & ";" & txtApk.Text)
     End Sub
 
     Private Sub frmMain_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        DarkMode.UpdateWindowTheme(Me, Theme.DARK)
         Dim args() As String = Environment.GetCommandLineArgs
         StartupPath = Application.StartupPath
         ConfigFile = Path.GetFileName(args(0).Replace(".exe", ".ini"))
