@@ -12,24 +12,29 @@
 ' Dec - 2023 v1.0.0.3 )  Conterted to VS2023 and .NET 4.
 ' *****************************************************
 
-Imports System
 Imports System.IO
 Imports System.Reflection
-Imports System.Threading
 
 Public Class frmMain
+    Private Const ERROR_HDR As String = "ERROR"
     Private StartupPath As String
     Private CurrentDirectory As DirectoryInfo
-    Private ConfigFile As String
+    Private FILE_CONFIG_INI, FILE_RUN_INSTALL_BAT As String
+    Private FILE_DEVICES_TMP, FILE_GET_DEVICES_BAT As String
+
 
     Private Sub frmMain_FormClosing(ByVal sender As Object, ByVal e As System.Windows.Forms.FormClosingEventArgs) Handles Me.FormClosing
-        File.WriteAllText(StartupPath & "\" & ConfigFile, txtAdbPath.Text & ";" & txtApk.Text)
+        File.WriteAllText(StartupPath & "\" & FILE_CONFIG_INI, txtAdbPath.Text & ";" & txtApk.Text)
     End Sub
 
     Private Sub frmMain_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         Dim args() As String = Environment.GetCommandLineArgs
         StartupPath = Application.StartupPath
-        ConfigFile = Path.GetFileName(args(0).Replace(".exe", ".ini"))
+
+        FILE_CONFIG_INI = Path.GetFileName(args(0).Replace(".exe", ".ini"))
+        FILE_RUN_INSTALL_BAT = StartupPath & "\Install.bat"
+        FILE_DEVICES_TMP = StartupPath & "\device.tmp"
+        FILE_GET_DEVICES_BAT = StartupPath & "\batFile.bat"
 
         CurrentDirectory = New DirectoryInfo(Directory.GetCurrentDirectory())
         Dim ApkFile As FileInfo() = CurrentDirectory.GetFiles("*.apk")
@@ -47,9 +52,9 @@ Public Class frmMain
                 MsgBox("ADB-Path or APK-Path not exist!", MsgBoxStyle.Exclamation Or MsgBoxStyle.MsgBoxSetForeground)
             End If
         Else
-            If File.Exists(StartupPath & "\" & ConfigFile) Then
+            If File.Exists(StartupPath & "\" & FILE_CONFIG_INI) Then
 
-                Dim strSplit() As String = File.ReadAllText(StartupPath & "\" & ConfigFile).Split(";")
+                Dim strSplit() As String = File.ReadAllText(StartupPath & "\" & FILE_CONFIG_INI).Split(";")
                 txtAdbPath.Text = strSplit(0)
                 txtApk.Text = strSplit(1)
 
@@ -119,11 +124,11 @@ Public Class frmMain
 
     Private Sub btnInstall_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnInstall.Click
         If Not File.Exists(txtAdbPath.Text) Then
-            MsgBox("ADB-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, "ERROR")
+            MsgBox("ADB-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, ERROR_HDR)
         ElseIf Not File.Exists(txtApk.Text) Then
-            MsgBox("APK-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, "ERROR")
+            MsgBox("APK-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, ERROR_HDR)
         ElseIf CheckedListBox1.CheckedItems.Count = 0 Then
-            MsgBox("No device selected!", MsgBoxStyle.Exclamation Or MsgBoxStyle.MsgBoxSetForeground, "ERROR")
+            MsgBox("No device selected!", MsgBoxStyle.Exclamation Or MsgBoxStyle.MsgBoxSetForeground, ERROR_HDR)
         Else
             For Each itemChecked In CheckedListBox1.CheckedItems
                 InstallDevice(itemChecked.ToString)
@@ -133,9 +138,9 @@ Public Class frmMain
 
     Private Sub AutoInstall()
         If Not File.Exists(txtAdbPath.Text) Then
-            MsgBox("ADB-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, "ERROR")
+            MsgBox("ADB-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, ERROR_HDR)
         ElseIf Not File.Exists(txtApk.Text) Then
-            MsgBox("APK-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, "ERROR")
+            MsgBox("APK-File not selected!", MsgBoxStyle.Critical Or MsgBoxStyle.MsgBoxSetForeground, ERROR_HDR)
         Else
             For Each device In CheckedListBox1.Items
                 InstallDevice(device.ToString)
@@ -149,41 +154,54 @@ Public Class frmMain
     Private Sub InstallDevice(ByVal Device As String)
         Dim batFile As String
         batFile = "@ECHO OFF" & vbCrLf
+        batFile = batFile & "PUSHD . " & vbCrLf
         batFile = batFile & txtAdbPath.Text.Substring(0, txtAdbPath.Text.IndexOf(":") + 1) & vbCrLf
         batFile = batFile & "cd " & txtAdbPath.Text.Substring(0, txtAdbPath.Text.LastIndexOf("\")) & vbCrLf
         batFile = batFile & "adb.exe -s " & Device & " install -r " & Chr(34) & txtApk.Text & Chr(34) & vbCrLf
         batFile = batFile & "adb.exe -s " & Device & " shell am start -n " & getPackageName() & "/.main" & vbCrLf
+        batFile = batFile & "POPD" & vbCrLf
 
-        File.WriteAllText(StartupPath & "\Install.bat", batFile)
+        File.WriteAllText(FILE_RUN_INSTALL_BAT, batFile)
 
         Dim AdbProcess As ProcessStartInfo
-        AdbProcess = New ProcessStartInfo(StartupPath & "\Install.bat")
+        AdbProcess = New ProcessStartInfo(FILE_RUN_INSTALL_BAT)
         Dim pp As Process = Process.Start(AdbProcess)
         pp.WaitForExit()
 
-        File.Delete(StartupPath & "\Install.bat")
+        SafeKill(FILE_RUN_INSTALL_BAT)
+    End Sub
+
+
+    Private Sub DeleteTmpFiles()
+        SafeKill(FILE_DEVICES_TMP)
+        SafeKill(FILE_GET_DEVICES_BAT)
+    End Sub
+
+    Private Sub SafeKill(fname As String)
+        If File.Exists(fname) Then
+            File.Delete(fname)
+        End If
     End Sub
 
     Private Sub SearchAllDevice()
-        Dim Device As String
-        Dim batFile As String
+        Dim Device, batFile As String
+        DeleteTmpFiles()
         batFile = "@ECHO OFF" & vbCrLf
+        batFile = batFile & "PUSHD . " & vbCrLf
         batFile = batFile & txtAdbPath.Text.Substring(0, txtAdbPath.Text.IndexOf(":") + 1) & vbCrLf
         batFile = batFile & "cd " & txtAdbPath.Text.Substring(0, txtAdbPath.Text.LastIndexOf("\")) & vbCrLf
-        batFile = batFile & "adb.exe devices > " & Chr(34) & StartupPath & "\device.tmp" & Chr(34) & vbCrLf
+        batFile = batFile & "adb.exe devices > " & Chr(34) & FILE_DEVICES_TMP & Chr(34) & vbCrLf
+        batFile = batFile & "POPD" & vbCrLf
 
-        File.WriteAllText(StartupPath & "\batFile.bat", batFile)
+        File.WriteAllText(FILE_GET_DEVICES_BAT, batFile)
 
         Dim AdbProcess As ProcessStartInfo
-        AdbProcess = New ProcessStartInfo(StartupPath & "\batFile.bat")
+        AdbProcess = New ProcessStartInfo(FILE_GET_DEVICES_BAT)
         Dim pp As Process = Process.Start(AdbProcess)
         pp.WaitForExit()
 
-        If File.Exists(StartupPath & "\device.tmp") Then
-            Dim strTemp() As String = File.ReadAllText(StartupPath & "\device.tmp").Split(vbCrLf)
-            File.Delete(StartupPath & "\device.tmp")
-            File.Delete(StartupPath & "\batFile.bat")
-
+        If File.Exists(FILE_DEVICES_TMP) Then
+            Dim strTemp() As String = File.ReadAllText(FILE_DEVICES_TMP).Split(vbCrLf)
             CheckedListBox1.Items.Clear()
 
             For i As Integer = 0 To strTemp.Length - 1
@@ -194,6 +212,7 @@ Public Class frmMain
                 End If
             Next
         End If
+        DeleteTmpFiles()
     End Sub
 
     Private Function getPackageName() As String

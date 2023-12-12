@@ -132,9 +132,9 @@ Partial Class frmMain
         'btnInstall
         '
         Me.btnInstall.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnInstall.Location = New System.Drawing.Point(432, 245)
+        Me.btnInstall.Location = New System.Drawing.Point(432, 140)
         Me.btnInstall.Name = "btnInstall"
-        Me.btnInstall.Size = New System.Drawing.Size(75, 23)
+        Me.btnInstall.Size = New System.Drawing.Size(75, 39)
         Me.btnInstall.TabIndex = 12
         Me.btnInstall.Text = "&Install"
         Me.btnInstall.UseVisualStyleBackColor = True
@@ -142,11 +142,11 @@ Partial Class frmMain
         'btnCancel
         '
         Me.btnCancel.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnCancel.Location = New System.Drawing.Point(342, 245)
+        Me.btnCancel.Location = New System.Drawing.Point(432, 242)
         Me.btnCancel.Name = "btnCancel"
         Me.btnCancel.Size = New System.Drawing.Size(75, 23)
         Me.btnCancel.TabIndex = 11
-        Me.btnCancel.Text = "&Cancel"
+        Me.btnCancel.Text = "&Close"
         Me.btnCancel.UseVisualStyleBackColor = True
         '
         'lblInfo
